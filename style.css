@@ -1,0 +1,192 @@
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    background: #08111c;
+    color: #eaf2f8;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.6;
+}
+
+
+/* Main page width */
+
+header,
+main,
+footer {
+    width: 92%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+
+/* Header */
+
+header {
+    padding: 90px 0 60px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 3.5rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+}
+
+header p {
+    margin: 5px 0 30px;
+    color: #91a4b7;
+    font-size: 1.3rem;
+}
+
+
+/* Navigation */
+
+nav {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+nav a {
+    color: #91a4b7;
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+nav a:hover {
+    color: #7cc7ff;
+}
+
+
+/* Main content */
+
+main {
+    padding-bottom: 60px;
+}
+
+section {
+    padding: 70px 0;
+    border-top: 1px solid #233448;
+}
+
+
+/* Headings */
+
+h2 {
+    margin: 0 0 30px;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+h3 {
+    margin: 40px 0 8px;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+
+/* Text */
+
+p {
+    max-width: 850px;
+    margin: 8px 0 18px;
+    color: #b8c6d3;
+    font-size: 1.05rem;
+}
+
+
+/* Honors */
+
+ul {
+    max-width: 850px;
+    padding-left: 22px;
+    color: #b8c6d3;
+}
+
+li {
+    margin-bottom: 10px;
+}
+
+
+/* Links inside content */
+
+section a {
+    color: #7cc7ff;
+    text-decoration: none;
+}
+
+section a:hover {
+    text-decoration: underline;
+}
+
+
+/* Footer */
+
+footer {
+    padding: 35px 0 60px;
+    border-top: 1px solid #233448;
+}
+
+footer p {
+    display: flex;
+    gap: 25px;
+    margin: 0;
+}
+
+footer a {
+    color: #91a4b7;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: #7cc7ff;
+}
+
+footer a:hover {
+    color: #7cc7ff;
+}
+
+/* Phones */
+
+@media (max-width: 700px) {
+    header,
+    main,
+    footer {
+        width: 90%;
+    }
+
+    header {
+        padding: 60px 0 40px;
+    }
+
+    header h1 {
+        font-size: 2.5rem;
+    }
+
+    header p {
+        font-size: 1.1rem;
+    }
+
+    nav {
+        gap: 18px;
+    }
+
+    section {
+        padding: 45px 0;
+    }
+
+    h2 {
+        font-size: 1.6rem;
+    }
+
+    footer p {
+        flex-wrap: wrap;
+    }
+}
