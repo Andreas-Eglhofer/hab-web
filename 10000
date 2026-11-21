@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1 id="direction">Waiting for HAB...</h1>
+<p id="hab">HAB: Waiting...</p>
+<button id="button" onclick="start()">Enable Compass</button>
+<p id="status">Waiting for location...</p>
+<p id="compass">Compass: Not enabled</p>
+
+<script>
+const API = "/api/update";
+const rad = Math.PI / 180;
+
+let me = null;
+let sat = null;
+let heading = null;
+let lastCompass = 0;
+let started = false;
+
+function point() {
+  const direction = document.getElementById("direction");
+
+  if (!sat || !sat.gpsValid || !sat.gpsFix) {
+    direction.textContent = "Waiting for HAB GPS fix...";
+    return;
+  }
+
+  if (!me) {
+    direction.textContent = "Waiting for your location...";
+    return;
+  }
+
+  if (heading === null) {
+    direction.textContent = "Waiting for compass...";
+    return;
+  }
+
+  if (Date.now() - lastCompass > 3000) {
+    direction.textContent = "Compass stopped updating";
+    return;
+  }
+
+  const a = me.latitude * rad;
+  const b = Number(sat.latitude) * rad;
+  const d = (Number(sat.longitude) - me.longitude) * rad;
+
+  const bearing = Math.atan2(
+    Math.sin(d) * Math.cos(b),
+    Math.cos(a) * Math.sin(b) -
+    Math.sin(a) * Math.cos(b) * Math.cos(d)
+  ) / rad;
+
+  const angle = ((bearing - heading + 540) % 360) - 180;
+
+  direction.textContent =
+    Math.abs(angle) < 5 ? "Facing HAB" :
+    angle > 0 ? `Turn right ${Math.round(angle)}°` :
+    `Turn left ${Math.round(-angle)}°`;
+}
+
+async function start() {
+  if (started) return;
+
+  if (typeof DeviceOrientationEvent === "undefined") {
+    document.getElementById("compass").textContent =
+      "Compass unavailable";
+    return;
+  }
+
+  try {
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      const permission =
+        await DeviceOrientationEvent.requestPermission();
+
+      if (permission !== "granted") {
+        document.getElementById("compass").textContent =
+          "Compass permission denied";
+        return;
+      }
+    }
+  } catch (e) {
+    document.getElementById("compass").textContent =
+      "Compass error: " + e.message;
+    return;
+  }
+
+  started = true;
+  document.getElementById("button").textContent = "Compass enabled";
+  document.getElementById("compass").textContent =
+    "Waiting for sensor readings...";
+
+  function compass(e) {
+    let newHeading = null;
+
+    if (e.webkitCompassHeading != null) {
+      newHeading = e.webkitCompassHeading;
+    } else if (e.absolute === true && e.alpha != null) {
+      newHeading = (360 - e.alpha) % 360;
+    }
+
+    if (newHeading === null) {
+      document.getElementById("compass").textContent =
+        `No absolute heading (alpha: ${e.alpha}, absolute: ${e.absolute})`;
+      return;
+    }
+
+    heading = newHeading;
+    lastCompass = Date.now();
+
+    document.getElementById("compass").textContent =
+      `Compass: ${Math.round(heading)}°`;
+
+    point();
+  }
+
+  window.addEventListener("deviceorientation", compass);
+  window.addEventListener("deviceorientationabsolute", compass);
+}
+
+navigator.geolocation.watchPosition(
+  p => {
+    me = p.coords;
+
+    document.getElementById("status").textContent =
+      `You: ${me.latitude.toFixed(5)}, ${me.longitude.toFixed(5)}
+       (±${Math.round(me.accuracy)} m)`;
+
+    point();
+  },
+  e => {
+    document.getElementById("status").textContent =
+      "Location error: " + e.message;
+  },
+  {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 20000
+  }
+);
+
+async function update() {
+  try {
+    const res = await fetch(API, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    sat = await res.json();
+
+    document.getElementById("hab").textContent =
+      `Latitude: ${sat.latitude}
+       Longitude: ${sat.longitude}
+       Altitude: ${sat.altitude} m`;
+
+    point();
+  } catch (e) {
+    document.getElementById("hab").textContent =
+      "API error: " + e.message;
+  }
+}
+
+update();
+setInterval(update, 2000);
+setInterval(point, 200);
+</script>
+
+</body>
+</html>
+
