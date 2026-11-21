@@ -1,72 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<stylem>
-  body {
-    margin: 0;
-    height: 100vh;
-    display: grid;
-    place-items: center;
-  }
-  #arrow {
-    font-size: 180px;
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="arrow">↑</div>
+<h1 id="direction">Waiting for HAB...</h1>
+<p id="hab">HAB: Waiting...</p>
 
-<button onclick = "start()"> Enable Compass </button>
+<button onclick="start()">Enable Compass</button>
+<p id="status">Waiting for location...</p>
 
 <script>
-let me, bearing = 0, heading = 0;
+const API = "/api/update";
 const rad = Math.PI / 180;
 
+let me, bearing = null, heading = null;
+
 function point() {
-  arrow.style.transform =
-    `rotate(${bearing - heading}deg)`;
+  if (bearing === null) return;
+
+  const direction = document.getElementById("direction");
+
+  if (heading === null) {
+    direction.textContent =
+      `HAB bearing: ${Math.round((bearing + 360) % 360)}° from north`;
+    return;
+  }
+
+  const angle = ((bearing - heading + 540) % 360) - 180;
+
+  direction.textContent =
+    Math.abs(angle) < 5 ? "Facing HAB" :
+    angle > 0 ? `Turn right ${Math.round(angle)}°` :
+    `Turn left ${Math.round(-angle)}°`;
 }
 
 async function start() {
-    if
-    (DeviceOrientationEvent.requestPermission)
-    {
-        if (await DeviceOrientationEvent.requestPermission) !== "granted") return;
-    }
+  if (typeof DeviceOrientationEvent === "undefined") {
+    document.getElementById("status").textContent =
+      "Compass unavailable";
+    return;
+  }
 
-window.addEventListener("deviceorientation", e => {
-  heading = e.webkitCompassHeading ?? (360 - (e.alpha || 0));
-  point();
-});
+  if (DeviceOrientationEvent.requestPermission) {
+    if (await DeviceOrientationEvent.requestPermission() !== "granted")
+      return;
+  }
+
+  let lastCompassUpdate = 0;
+
+  window.addEventListener("deviceorientation", e => {
+    if (Date.now() - lastCompassUpdate < 1000) return;
+    lastCompassUpdate = Date.now();
+
+    if (e.webkitCompassHeading != null)
+      heading = e.webkitCompassHeading;
+    else if (e.absolute && e.alpha != null)
+      heading = 360 - e.alpha;
+    else return;
+
+    point();
+  });
 }
 
-navigator.geolocation.watchPosition(p => {
-  me = p.coords;
-  update();
-});
+
+navigator.geolocation.watchPosition(
+  p => {
+    me = p.coords;
+
+    document.getElementById("status").textContent =
+      `You: ${me.latitude.toFixed(5)}, ${me.longitude.toFixed(5)}`;
+
+    update();
+  },
+  e => {
+    document.getElementById("status").textContent =
+      "Location error: " + e.message;
+  },
+  { enableHighAccuracy: true,
+  maximumAge: 0,
+  timeout: 20000
+  }
+);
 
 async function update() {
-  if (!me) return;
+  try {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  const res = await fetch("https://34.41.70.175:808/api/update");
-  const sat = await res.json();
+    const sat = await res.json();
 
-  const a = me.latitude * rad;
-  const b = sat.latitude * rad;
-  const d = (sat.longitude - me.longitude) * rad;
+    document.getElementById("hab").textContent =
+      `Latitude: ${sat.latitude}
+       Longitude: ${sat.longitude}
+       Altitude: ${sat.altitude} m`;
 
-  bearing = Math.atan2(
-    Math.sin(d) * Math.cos(b),
-    Math.cos(a) * Math.sin(b) -
-    Math.sin(a) * Math.cos(b) * Math.cos(d)
-  ) / rad;
+    if (!sat.gpsValid || !sat.gpsFix) {
+      bearing = null;
+      document.getElementById("direction").textContent =
+        "Waiting for HAB GPS fix...";
+      return;
+    }
 
-  point();
+    if (!me) return;
+
+    const a = me.latitude * rad;
+    const b = sat.latitude * rad;
+    const d = (sat.longitude - me.longitude) * rad;
+
+    bearing = Math.atan2(
+      Math.sin(d) * Math.cos(b),
+      Math.cos(a) * Math.sin(b) -
+      Math.sin(a) * Math.cos(b) * Math.cos(d)
+    ) / rad;
+
+    point();
+
+  } catch (e) {
+    document.getElementById("status").textContent =
+      "API error: " + e.message;
+  }
 }
 
-setInterval(update, 5000);
+update();
+setInterval(update, 30000);
 </script>
 
 </body>
