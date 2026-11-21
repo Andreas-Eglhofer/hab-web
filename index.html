@@ -1,12 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hab-web</title>
-    <link rel="stylesheet" href="style.css?v=2">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<stylem>
+  body {
+    margin: 0;
+    height: 100vh;
+    display: grid;
+    place-items: center;
+  }
+  #arrow {
+    font-size: 180px;
+  }
+</style>
 </head>
 <body>
-    <b>Hello world<\b>
+
+<div id="arrow">↑</div>
+
+<button onclick = "start()"> Enable Compass </button>
+
+<script>
+let me, bearing = 0, heading = 0;
+const rad = Math.PI / 180;
+
+function point() {
+  arrow.style.transform =
+    `rotate(${bearing - heading}deg)`;
+}
+
+async function start() {
+    if
+    (DeviceOrientationEvent.requestPermission)
+    {
+        if (await DeviceOrientationEvent.requestPermission) !== "granted") return;
+    }
+
+window.addEventListener("deviceorientation", e => {
+  heading = e.webkitCompassHeading ?? (360 - (e.alpha || 0));
+  point();
+});
+}
+
+navigator.geolocation.watchPosition(p => {
+  me = p.coords;
+  update();
+});
+
+async function update() {
+  if (!me) return;
+
+  const res = await fetch("https://34.41.70.175:808/api/update");
+  const sat = await res.json();
+
+  const a = me.latitude * rad;
+  const b = sat.latitude * rad;
+  const d = (sat.longitude - me.longitude) * rad;
+
+  bearing = Math.atan2(
+    Math.sin(d) * Math.cos(b),
+    Math.cos(a) * Math.sin(b) -
+    Math.sin(a) * Math.cos(b) * Math.cos(d)
+  ) / rad;
+
+  point();
+}
+
+setInterval(update, 5000);
+</script>
+
 </body>
 </html>
